@@ -14,6 +14,7 @@ import {
   Observable,
   Subject,
   throttle,
+  throttleTime,
 } from 'rxjs';
 import { displayDate, sampleData } from './events';
 
@@ -44,6 +45,7 @@ export class AppComponent implements AfterViewInit {
 
   private currentOffset = 0;
   private resourceSize = 4000;
+  private maxEvents = 10000;
 
   constructor(private _elementRef: ElementRef) {
     this.resources$.next([
@@ -57,7 +59,7 @@ export class AppComponent implements AfterViewInit {
       },
     ]);
 
-    this.events = this.generateEvents();
+    this.events = this.generateEvents(this.maxEvents);
   }
 
   ngAfterViewInit(): void {
@@ -69,7 +71,7 @@ export class AppComponent implements AfterViewInit {
       passive: true,
     });
 
-    scroll$.pipe(debounceTime(10)).subscribe((ev) => {
+    scroll$.pipe(debounceTime(50)).subscribe((ev) => {
       this.scrolled(ev);
     });
   }
@@ -79,22 +81,25 @@ export class AppComponent implements AfterViewInit {
 
     const maxScroll =
       this.resourceContainer.scrollHeight - this.resourceContainer.offsetHeight;
-    const scroll = this.resourceContainer.scrollTop;
+    const scrollTop = this.resourceContainer.scrollTop;
     const scrollLeft = this.resourceContainer.scrollLeft;
-    const padding = 75;
+
+    //TODO calculer la position de la scrollbar en fonction de l'élément visible au moment du changement de ressource
+    //TODO corriger le problème lorsque l'on scroll vers le haut
+    const padding = 50;
     if (
-      maxScroll - padding < scroll &&
+      maxScroll - padding < scrollTop &&
       this.currentOffset < this.resourceSize
     ) {
-      console.log('bottom');
+      console.log(scrollTop, 'bottom');
       this.currentOffset += 10;
       this.addRessources(this.currentOffset);
-      this.resourceContainer.scrollTo(scrollLeft, padding);
-    } else if (scroll < padding && this.currentOffset > 0) {
-      console.log('top');
+      this.resourceContainer.scrollTop = (2 * padding);
+    } else if (scrollTop < padding && this.currentOffset > 0) {
+      console.log(scrollTop,'top');
       this.currentOffset -= 10;
       this.addRessources(this.currentOffset);
-      this.resourceContainer.scrollTo(scrollLeft, maxScroll - padding);
+      this.resourceContainer.scrollTop =  maxScroll - (2 * padding);
     }
   }
 
@@ -119,7 +124,7 @@ export class AppComponent implements AfterViewInit {
     return result;
   }
 
-  generateEvents(length: number = 1000): SchedulerEvent[] {
+  generateEvents(length: number): SchedulerEvent[] {
     const result: SchedulerEvent[] = [];
 
     for (let index = 0; index < length; index++) {
@@ -138,7 +143,6 @@ export class AppComponent implements AfterViewInit {
       });
     }
 
-    console.log(result)
     return result;
   }
 
