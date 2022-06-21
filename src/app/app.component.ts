@@ -27,8 +27,10 @@ export class AppComponent implements AfterViewInit {
   // protected container: ElementRef<HTMLElement> | undefined;
 
   title = 'test';
-  public selectedDate: Date = displayDate;
-  public events: SchedulerEvent[] = sampleData;
+  private currentYear = new Date().getFullYear();
+  public selectedDate = new Date(this.currentYear, 5, 24);
+
+  public events: SchedulerEvent[];
   public group: any = {
     resources: ['Rooms'],
     orientation: 'vertical',
@@ -41,7 +43,7 @@ export class AppComponent implements AfterViewInit {
   // items = Array.from({ length: 1000 }).map((_, i) => `Item #${i}`);
 
   private currentOffset = 0;
-  private maxOffset = 40;
+  private resourceSize = 4000;
 
   constructor(private _elementRef: ElementRef) {
     this.resources$.next([
@@ -54,6 +56,8 @@ export class AppComponent implements AfterViewInit {
         colorField: 'color',
       },
     ]);
+
+    this.events = this.generateEvents();
   }
 
   ngAfterViewInit(): void {
@@ -67,43 +71,30 @@ export class AppComponent implements AfterViewInit {
 
     scroll$.pipe(debounceTime(10)).subscribe((ev) => {
       this.scrolled(ev);
-      // this.addRessources();
     });
-    // this.resourceContainer.addEventListener(
-    //   'scroll',
-    //   (ev: Event) => {
-    //     this.scrolled(ev);
-    //   },
-    //   { passive: true }
-    // );
   }
 
   scrolled(ev: any) {
     if (!this.resourceContainer || !this.resourceContainer.offsetParent) return;
-    // const scrollTop = this.resourceContainer.scrollTop;
-    // const offsetHeight = this.resourceContainer.offsetHeight;
-    // if (scrollTop > 140) {
-    //   this.addRessources()
-    // }
 
-    // var offset =  this.resourceContainer.getBoundingClientRect().top -  this.resourceContainer.offsetParent.getBoundingClientRect().top;
-    // const top = window.innerHeight - offset;
-
-    // console.log(this.resourceContainer.getBoundingClientRect().height);
-    // console.log();
     const maxScroll =
       this.resourceContainer.scrollHeight - this.resourceContainer.offsetHeight;
     const scroll = this.resourceContainer.scrollTop;
-    if (maxScroll === scroll && this.currentOffset < this.maxOffset) {
+    const scrollLeft = this.resourceContainer.scrollLeft;
+    const padding = 75;
+    if (
+      maxScroll - padding < scroll &&
+      this.currentOffset < this.resourceSize
+    ) {
       console.log('bottom');
-      this.currentOffset++;
+      this.currentOffset += 10;
       this.addRessources(this.currentOffset);
-      this.resourceContainer.scrollTo(0, 0);
-    } else if (scroll === 0 && this.currentOffset > 0) {
+      this.resourceContainer.scrollTo(scrollLeft, padding);
+    } else if (scroll < padding && this.currentOffset > 0) {
       console.log('top');
-      this.currentOffset--;
+      this.currentOffset -= 10;
       this.addRessources(this.currentOffset);
-      this.resourceContainer.scrollTo(0, maxScroll);
+      this.resourceContainer.scrollTo(scrollLeft, maxScroll - padding);
     }
   }
 
@@ -118,13 +109,40 @@ export class AppComponent implements AfterViewInit {
 
   addData(offset = 0) {
     const result = [];
-    for (let index = 0; index < 10; index++) {
+    for (let index = Math.max(offset - 5, 0); index < offset + 15; index++) {
       result.push({
-        text: 'Meeting Room ' + offset * 10 + index,
-        value: 1,
+        text: 'Meeting Room ' + index,
+        value: index,
         color: '#6eb3fa',
       });
     }
     return result;
+  }
+
+  generateEvents(length: number = 1000): SchedulerEvent[] {
+    const result: SchedulerEvent[] = [];
+
+    for (let index = 0; index < length; index++) {
+      const start = new Date(this.selectedDate);
+      const end = new Date(this.selectedDate);
+      start.setHours(this.randomInt(8, 10), 0, 0, 0);
+      end.setHours(this.randomInt(11, 13), 0, 0, 0);
+      result.push(<SchedulerEvent>{
+        id: index,
+        start,
+        end,
+        isAllDay: false,
+        title: 'Event ' + index,
+        description: 'Event ' + index,
+        roomId: this.randomInt(0, this.resourceSize),
+      });
+    }
+
+    console.log(result)
+    return result;
+  }
+
+  randomInt(min: number, max: number): number {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 }
